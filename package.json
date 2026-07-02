@@ -1,0 +1,15 @@
+{
+  "name": "profpilot",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @profpilot/web dev",
+    "build": "pnpm --filter @profpilot/shared build && pnpm --filter @profpilot/web build",
+    "lint": "pnpm --filter @profpilot/web lint",
+    "typecheck": "pnpm --filter @profpilot/web typecheck && pnpm --filter @profpilot/shared typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
