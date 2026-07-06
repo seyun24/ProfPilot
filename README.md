@@ -1,84 +1,102 @@
 # ProfPilot
 
-ProfPilot is an AI-assisted professor workflow platform. The MVP foundation provides a
-Next.js frontend, FastAPI backend, PostgreSQL database, Docker Compose setup, shared
-role types, and seed data for professor/student flows.
+ProfPilot은 교수의 **시험 관리**와 **학생 상담 예약**을 한 곳에서 처리하는 워크플로우 플랫폼입니다.
+교수는 시험을 출제·채점하고 상담을 승인하며, 학생은 허용된 시험에 응시하고 상담을 신청합니다.
+시험 응시는 별도의 **Live USB 시험 환경**(Lubuntu + Chromium 키오스크)에서 진행하도록 구성했습니다.
 
-## Monorepo Structure
+## 주요 기능
+
+### 시험 출제 · 응시 · 채점
+- **문항 유형별 출제**: 객관식, OX, 단답형, 서술형
+- **문항 이미지 첨부**, 배점·제한시간 설정
+- **시험 코드 발급 / 공개 / 마감**, 응시 대상 학생(학번) 명단 등록
+- **학생 응시**: 학번 + 시험 코드로 입장 → 제한시간 내 답안 제출
+- **채점**
+  - 객관식·OX: **자동채점**(정답 일치 여부)
+  - 단답형·서술형: **키워드 기반 부분점수**(정답 키워드 중 맞은 개수 비율로 점수 산정) 또는 **수동채점**(점수 직접 입력 + 비고 작성)
+  - 키워드가 없으면 자동으로 수동채점 대상으로 분류, 일괄 채점 지원
+- **결과 조회**: 학생은 시험 코드 + 학번으로 채점 결과와 문항별 피드백 확인
+- 제출 현황·문항별 통계 제공
+
+### 상담 예약 캘린더
+- 학생이 **학번**으로 상담 신청 (오전 9시 ~ 오후 10시, 1시간 단위)
+- **교수 승인제**: 신청은 대기 상태이며, 교수가 승인해야 캘린더에 확정
+- **근무 요일·시간 설정**: 교수가 열지 않은 요일(예: 화·수)은 **기본 차단**
+- **특정 날짜·시간 차단**(사유 기록) 및 해제
+- 중복 예약 방지(한 시간대 1명), 대기 / 승인 / 거절 상태 관리
+- 캘린더에서 상담 불가(휴무) 날짜는 **회색으로 표시**
+
+### AI 보조 기능
+- 문항 검토(오타·모호한 표현·중복 보기·정답 충돌·난이도 의견)
+- 상담 노트 요약 및 액션 아이템 추출
+- 주간 보고서 요약
+- `OPENAI_API_KEY`가 비어 있으면 외부 호출 없이 **목(mock) 응답**으로 동작
+
+### 기타
+- 아이디/비밀번호 로그인 및 교수/학생 **권한별 화면 분기**
+- **다크 모드** 지원(설정 저장, OS 설정 자동 감지)
+
+## Live USB 시험 환경
+
+부정행위를 줄이고 통제된 응시 환경을 제공하기 위해 시험 클라이언트(`exam-client`)를
+독립 부팅 이미지로 구성했습니다.
+
+- **Lubuntu** 기반 경량 리눅스에 **Chromium을 키오스크(kiosk) 모드**로 실행해
+  부팅과 동시에 `exam-client`(시험 응시 화면)만 전체 화면으로 표시
+- 이 구성을 **ISO 이미지**로 만들어 **USB에 기록**하고, 해당 USB로 부팅하면 곧바로 시험 화면 진입
+- 학생은 부팅된 화면에서 **학번 + 시험 코드**만 입력해 응시 (문제·정답·채점 로직은 서버에만 존재)
+- **시연 시에는 VirtualBox에서 해당 ISO를 로드**하여 USB 부팅 환경을 그대로 재현해 시연
+
+## 모노레포 구조
 
 ```text
 apps/
-  api/      FastAPI backend
-  web/      Next.js frontend
+  api/          FastAPI 백엔드 (시험·상담·채점·AI)
+  web/          Next.js 관리 화면 (교수/학생)
+  exam-client/  Next.js 시험 응시 화면 (Live USB 키오스크용)
 packages/
-  shared/   Shared TypeScript role and API types
+  shared/       공용 TypeScript 타입 (역할·API)
 infra/
-  postgres/ PostgreSQL initialization files
-docs/
-  product-brief.md
+  postgres/     PostgreSQL 초기화 파일
 ```
 
-## Run With Docker
+## 실행 (Docker)
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-If a local port is already in use, override it in `.env`:
+포트가 이미 사용 중이면 `.env`에서 변경합니다.
 
 ```bash
 WEB_PORT=3001
 API_PORT=8001
+EXAM_CLIENT_PORT=3101
 POSTGRES_PORT=5433
 ```
 
-Services:
+### 서비스
 
-- Web: http://localhost:3000
+- 관리 화면(web): http://localhost:3000
+- 시험 응시(exam-client): http://localhost:3100
 - API: http://localhost:8000
-- API health: http://localhost:8000/health
+- API 헬스체크: http://localhost:8000/health
 - PostgreSQL: localhost:5432
 
-Inside Docker, the web server uses `API_INTERNAL_BASE_URL=http://api:8000` for
-server-side API calls.
+## 데모 계정
 
-## Seed Users
+서버 기동 시 기본 테이블과 시드 계정이 생성됩니다. (비밀번호는 모두 `1234`)
 
-The API creates the base tables and seed users on startup.
+- 교수: 아이디 `prof01` ~ `prof05`
+- 학생: 아이디 `s2026001` ~ `s2026010` (학번 `2026001` ~ `2026010`)
 
-Professor:
+## 환경 변수
 
-- `professor@profpilot.local`
-- Professor Kim
+주요 값은 `.env.example` 참고. AI 기능은 선택 사항입니다.
 
-Students:
-
-- `s2026001@profpilot.local`
-- Student Lee
-- student id `2026001`
-
-- `s2026002@profpilot.local`
-- Student Park
-- student id `2026002`
-
-## Foundation Scope
-
-Included:
-
-- Common app shell and routes
-- Professor/student role model
-- Shared API client
-- FastAPI health and user endpoints
-- PostgreSQL connection
-- Startup seed data
-- Docker Compose for web, API, and database
-
-Not included yet:
-
-- Full exam module
-- Consultation module
-- Graduation project module
-- Real authentication
-- AI provider integration
-- Live USB implementation
+```bash
+OPENAI_API_KEY=        # 비워 두면 목(mock) 응답으로 동작 (외부 호출·비용 없음)
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4o-mini
+```
