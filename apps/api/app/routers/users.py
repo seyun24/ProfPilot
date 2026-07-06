@@ -1,12 +1,26 @@
+import hashlib
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app.db import get_db
 from app.models import User, UserRole
-from app.schemas import SeedStatus, UserRead
+from app.schemas import LoginRequest, LoginResponse, SeedStatus, UserRead
 
 router = APIRouter(prefix="/api", tags=["users"])
+
+
+def password_hash(password: str) -> str:
+    return hashlib.sha256(f"profpilot:{password}".encode()).hexdigest()
+
+
+@router.post("/auth/login", response_model=LoginResponse)
+def login(payload: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse:
+    user = db.scalar(select(User).where(User.username == payload.username.strip()))
+    if user is None or user.password_hash != password_hash(payload.password):
+        raise HTTPException(status_code=401, detail="아이디 또는 비밀번호가 올바르지 않습니다.")
+    return LoginResponse(user=user)
 
 
 @router.get("/users", response_model=list[UserRead])

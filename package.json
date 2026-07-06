@@ -5,9 +5,10 @@
   "packageManager": "pnpm@10.0.0",
   "scripts": {
     "dev": "pnpm --parallel --filter @profpilot/web dev",
-    "build": "pnpm --filter @profpilot/shared build && pnpm --filter @profpilot/web build",
+    "dev:exam": "pnpm --filter @profpilot/exam-client dev",
+    "build": "pnpm --filter @profpilot/shared build && pnpm --filter @profpilot/web build && pnpm --filter @profpilot/exam-client build",
     "lint": "pnpm --filter @profpilot/web lint",
-    "typecheck": "pnpm --filter @profpilot/web typecheck && pnpm --filter @profpilot/shared typecheck"
+    "typecheck": "pnpm --filter @profpilot/web typecheck && pnpm --filter @profpilot/exam-client typecheck && pnpm --filter @profpilot/shared typecheck"
   },
   "devDependencies": {
     "typescript": "^5.7.0"
